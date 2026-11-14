@@ -23,9 +23,6 @@ jobs:
       run: |
         python3 -c "
         import zipfile, glob, os, shutil
-        print('=== REPOSITORY FILES AT START ===')
-        print(os.listdir('.'))
-        
         zips = [f for f in os.listdir('.') if f.endswith('.zip')]
         if zips:
             zip_name = zips[0]
@@ -36,7 +33,6 @@ jobs:
             
             for item in os.listdir('extracted_temp'):
                 if item == '.github':
-                    print('Skipping .github to protect active workflow.')
                     continue
                 src = os.path.join('extracted_temp', item)
                 dst = os.path.join('.', item)
@@ -45,17 +41,10 @@ jobs:
                     else: os.remove(dst)
                 shutil.move(src, dst)
             shutil.rmtree('extracted_temp')
-            print('Successfully extracted and organized ZIP contents.')
-        else:
-            print('WARNING: No .zip file found in root!')
-        
-        print('=== FILES AFTER EXTRACTION ===')
-        print(os.listdir('.'))
         "
 
     - name: Install Android SDK & Build Tools Manually
       run: |
-        echo "Setting up Android SDK..."
         mkdir -p $HOME/android-sdk/cmdline-tools
         wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
         unzip -q cmdline-tools.zip -d $HOME/android-sdk/cmdline-tools
@@ -71,19 +60,28 @@ jobs:
         yes | sdkmanager --licenses || true
         sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-    - name: Build APK with Gradle & Capture Debug Logs
+    - name: Build APK with Gradle Wrapper
       run: |
         set -o pipefail
         export ANDROID_HOME=$HOME/android-sdk
         export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
         
-        gradle wrapper --gradle-version 8.5
+        # Ensure gradlew has correct permissions
         chmod +x gradlew
         
-        ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build_output.log
+        # Build using the project's own wrapper without global gradle conflict
+        ./gradlew assembleDebug --stacktrace 2>&1 | tee build_output.log
 
     - name: Upload Success APK Artifact
+      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
         path: app/build/outputs/apk/debug/app-debug.apk
+
+    - name: Upload Failure Log Artifact
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: Failed-Log
+        path: build_output.log
