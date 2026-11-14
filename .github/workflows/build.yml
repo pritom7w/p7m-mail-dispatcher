@@ -13,6 +13,11 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
+    - name: Install Unzip Utility
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y unzip
+
     - name: Unzip & Organize Project Files
       run: |
         ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
@@ -20,9 +25,9 @@ jobs:
           echo "Extracting $ZIP_FILE..."
           unzip -o "$ZIP_FILE" -d extracted_temp
           if [ -d "extracted_temp/MailSenderApp" ]; then
-            cp -r extracted_temp/MailSenderApp/* .
+            cp -r extracted_temp/MailSenderApp/. .
           else
-            cp -r extracted_temp/* .
+            cp -r extracted_temp/. .
           fi
           rm -rf extracted_temp "$ZIP_FILE"
         fi
