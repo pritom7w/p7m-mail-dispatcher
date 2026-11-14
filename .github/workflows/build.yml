@@ -1,8 +1,9 @@
-name: Build Android APK
+name: Unzip & Build Android APK
 
 on:
   push:
     branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,6 +13,18 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
+    - name: Unzip Uploaded Project Archive & Clean Up ZIP
+      run: |
+        ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
+        if [ -n "$ZIP_FILE" ]; then
+          echo "Found ZIP file: $ZIP_FILE. Extracting..."
+          unzip -o "$ZIP_FILE" -d .
+          rm "$ZIP_FILE"
+          echo "Extraction complete and ZIP file deleted automatically!"
+        else
+          echo "No ZIP file found, proceeding with repository files."
+        fi
+
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
@@ -20,7 +33,6 @@ jobs:
 
     - name: Install Android SDK Manually
       run: |
-        echo "Downloading Android Command Line Tools..."
         mkdir -p $HOME/android-sdk/cmdline-tools
         wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
         unzip -q cmdline-tools.zip -d $HOME/android-sdk/cmdline-tools
