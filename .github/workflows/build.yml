@@ -26,7 +26,6 @@ jobs:
         print('=== REPOSITORY FILES AT START ===')
         print(os.listdir('.'))
         
-        # Look for MailSenderApp.zip or any zip file
         zips = [f for f in os.listdir('.') if f.endswith('.zip')]
         if zips:
             zip_name = zips[0]
@@ -35,24 +34,16 @@ jobs:
                 z.extractall('extracted_temp')
             os.remove(zip_name)
             
-            temp_contents = os.listdir('extracted_temp')
-            if len(temp_contents) == 1 and os.path.isdir(os.path.join('extracted_temp', temp_contents[0])):
-                inner_dir = os.path.join('extracted_temp', temp_contents[0])
-                for item in os.listdir(inner_dir):
-                    src = os.path.join(inner_dir, item)
-                    dst = os.path.join('.', item)
-                    if os.path.exists(dst):
-                        if os.path.isdir(dst): shutil.rmtree(dst)
-                        else: os.remove(dst)
-                    shutil.move(src, dst)
-            else:
-                for item in temp_contents:
-                    src = os.path.join('extracted_temp', item)
-                    dst = os.path.join('.', item)
-                    if os.path.exists(dst):
-                        if os.path.isdir(dst): shutil.rmtree(dst)
-                        else: os.remove(dst)
-                    shutil.move(src, dst)
+            for item in os.listdir('extracted_temp'):
+                if item == '.github':
+                    print('Skipping .github to protect active workflow.')
+                    continue
+                src = os.path.join('extracted_temp', item)
+                dst = os.path.join('.', item)
+                if os.path.exists(dst):
+                    if os.path.isdir(dst): shutil.rmtree(dst)
+                    else: os.remove(dst)
+                shutil.move(src, dst)
             shutil.rmtree('extracted_temp')
             print('Successfully extracted and organized ZIP contents.')
         else:
@@ -82,28 +73,17 @@ jobs:
 
     - name: Build APK with Gradle & Capture Debug Logs
       run: |
+        set -o pipefail
         export ANDROID_HOME=$HOME/android-sdk
         export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
         
         gradle wrapper --gradle-version 8.5
         chmod +x gradlew
         
-        # Execute Gradle and pipe all output to a log file while also showing it live
-        ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build_output.log || {
-            echo "BUILD FAILED! Check build_output.log artifact."
-            exit 1
-        }
+        ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build_output.log
 
     - name: Upload Success APK Artifact
-      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
         path: app/build/outputs/apk/debug/app-debug.apk
-
-    - name: Upload Failure Log Artifact
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: Failed-Log
-        path: build_output.log
