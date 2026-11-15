@@ -1,4 +1,5 @@
 name: Build Android APK with Auto-Debug
+name: Build Android APK Fast
 
 on:
   push:
@@ -13,18 +14,13 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Install Unzip & System Gradle
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y unzip gradle
+    - name: Install Unzip
+      run: sudo apt-get update && sudo apt-get install -y unzip
 
     - name: Detect, Unzip, and Organize Project Files
       run: |
         python3 -c "
         import zipfile, glob, os, shutil
-        print('=== FILES BEFORE UNZIP ===')
-        print(os.listdir('.'))
-        
         zips = [f for f in os.listdir('.') if f.endswith('.zip')]
         if zips:
             zip_name = zips[0]
@@ -46,9 +42,6 @@ jobs:
             print('Successfully extracted and organized ZIP contents.')
         else:
             print('WARNING: No .zip file found in root!')
-        
-        print('=== FILES AFTER UNZIP ===')
-        print(os.listdir('.'))
         "
 
     - name: Set up JDK 17
@@ -57,33 +50,19 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Install Android SDK & Unify Environment Variables
+    - name: Configure Pre-installed Android SDK
       run: |
-        echo "Setting up unified Android SDK..."
-        mkdir -p $HOME/android-sdk/cmdline-tools
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
-        unzip -q cmdline-tools.zip -d $HOME/android-sdk/cmdline-tools
-        mv $HOME/android-sdk/cmdline-tools/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
-        
-        # Unify both ANDROID_HOME and ANDROID_SDK_ROOT to prevent path conflict errors
-        echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
-        echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
-        echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
-        echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
-        
-        export ANDROID_HOME=$HOME/android-sdk
-        export ANDROID_SDK_ROOT=$HOME/android-sdk
-        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
-        
-        yes | sdkmanager --licenses || true
-        sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+        echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+        echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+        echo "/usr/local/lib/android/sdk/platform-tools" >> $GITHUB_PATH
+        echo "/usr/local/lib/android/sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
     - name: Generate Gradle 8.7 Wrapper & Build APK
       run: |
         set -o pipefail
-        export ANDROID_HOME=$HOME/android-sdk
-        export ANDROID_SDK_ROOT=$HOME/android-sdk
-        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+        export ANDROID_HOME=/usr/local/lib/android/sdk
+        export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
+        export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin
         
         gradle wrapper --gradle-version 8.7
         chmod +x gradlew
