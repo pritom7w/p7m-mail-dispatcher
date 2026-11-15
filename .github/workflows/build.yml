@@ -16,7 +16,7 @@ jobs:
     - name: Install Unzip
       run: sudo apt-get update && sudo apt-get install -y unzip
 
-    - name: Detect, Unzip, and Organize Project Files
+    - name: Detect, Unzip, Patch & Organize Project Files
       run: |
         python3 -c "
         import zipfile, glob, os, shutil
@@ -41,6 +41,17 @@ jobs:
             print('Successfully extracted and organized ZIP contents.')
         else:
             print('WARNING: No .zip file found in root!')
+
+        # Auto-patch MainActivity.kt illegal regex escape if present
+        main_path = 'app/src/main/java/com/p7m/mailsender/MainActivity.kt'
+        if os.path.exists(main_path):
+            with open(main_path, 'r', encoding='utf-8') as f:
+                code = f.read()
+            if r'@[a-zA-Z0-9.-]+\.[a-zA-Z]' in code:
+                code = code.replace(r'@[a-zA-Z0-9.-]+\.[a-zA-Z]', r'@[a-zA-Z0-9.-]+\\.[a-zA-Z]')
+                with open(main_path, 'w', encoding='utf-8') as f:
+                    f.write(code)
+                print('Successfully auto-patched MainActivity.kt regex escape!')
         "
 
     - name: Set up JDK 17
