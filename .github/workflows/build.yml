@@ -42,16 +42,25 @@ jobs:
         else:
             print('WARNING: No .zip file found in root!')
 
-        # Auto-patch MainActivity.kt illegal regex escape if present
+        # Fix MainActivity.kt email regex escape line
         main_path = 'app/src/main/java/com/p7m/mailsender/MainActivity.kt'
         if os.path.exists(main_path):
             with open(main_path, 'r', encoding='utf-8') as f:
-                code = f.read()
-            if r'@[a-zA-Z0-9.-]+\.[a-zA-Z]' in code:
-                code = code.replace(r'@[a-zA-Z0-9.-]+\.[a-zA-Z]', r'@[a-zA-Z0-9.-]+\\.[a-zA-Z]')
-                with open(main_path, 'w', encoding='utf-8') as f:
-                    f.write(code)
-                print('Successfully auto-patched MainActivity.kt regex escape!')
+                content = f.read()
+            
+            # Replace the illegal escape with a valid Kotlin regex pattern
+            old_pattern = 'val emailRegex = Regex(\"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}\")'
+            new_pattern = 'val emailRegex = Regex(\"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\\\\\\.[a-zA-Z]{2,}\")'
+            
+            if old_pattern in content:
+                content = content.replace(old_pattern, new_pattern)
+            else:
+                # Fallback replacement for any variant
+                content = content.replace(r'\\.[a-zA-Z]', r'\\\\.[a-zA-Z]')
+                
+            with open(main_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            print('Successfully patched MainActivity.kt regex!')
         "
 
     - name: Set up JDK 17
