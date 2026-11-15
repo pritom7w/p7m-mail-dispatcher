@@ -75,14 +75,14 @@ jobs:
         yes | sdkmanager --licenses || true
         sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-    - name: Generate Gradle Wrapper & Build APK
+    - name: Generate Gradle 8.7 Wrapper & Build APK
       run: |
         set -o pipefail
         export ANDROID_HOME=$HOME/android-sdk
         export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
         
-        # Generate the missing gradlew wrapper files automatically
-        gradle wrapper --gradle-version 8.5
+        # Upgrade Gradle wrapper to 8.7 to match AGP version requirements
+        gradle wrapper --gradle-version 8.7
         
         chmod +x gradlew
         ./gradlew assembleDebug --stacktrace 2>&1 | tee build_output.log
